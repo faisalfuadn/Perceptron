@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Nov  7 20:11:28 2020
-
-@author: suantara
-"""
-
 """
 Simple Perceptron
 Prove Perceptron only can solve linear problem
