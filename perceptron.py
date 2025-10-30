@@ -1,136 +1,69 @@
-"""
-Simple Perceptron
-Prove Perceptron only can solve linear problem
-Input:
-    -A : Int (from data)
-    -B : Int (from data)
-    -bias: Float (pre-determined)
-Parameter:
-    -learning_rate : how fast the model change (0-1)
-    -Epochs= no of iteration (pre-determined)
-    -no_input= total input number of data
-"""
 import numpy as np
-class perceptron(object):
-    def __init__(self, no_input, epochs=100, learning_rate=0.001):
-        self.epochs= epochs
-        self.learning_rate= learning_rate
-        self.weight= np.random.normal(0, 0.5, size=(no_input + 1, ))
-        self.error= []
-        self.act_function='sigmoid'
-        self.labels=[]
-        
-    def activation_function(self, value):
-        """
-        Parameters
-        ----------
-        value : value
-            a value feeded to the selected activation function
+import matplotlib.pyplot as plt
 
-        Returns
-        -------
-        value : int or float
-            output value from the selected activation function
+class Perceptron:
+    def __init__(self, no_input, epochs=100, learning_rate=0.01):
+        self.epochs = epochs
+        self.learning_rate = learning_rate
+        self.weight = np.random.normal(0, 0.5, size=(no_input + 1,))
+        self.error = []
+        self.labels = []
 
-        """
-        if self.act_function.lower() == 'unit_step':
-            if value > 0:
-                value= 1
-            elif value < 0:
-                value= 0
-        elif self.act_function.lower() == 'linear':
-            value= value
-        
-        elif self.act_function.lower() == 'sigmoid':
-            value= 1/(1 +np.exp(-value))
-        
-        elif self.act_function.lower() == 'tanh':
-            value= (np.exp(2*value)-1) / (np.exp(2*value)+1)
-        
-        elif self.act_function.lower() == 'relu':
-            if value > 0:
-                value= value
-            elif value < 0:
-                value= 0
-        elif self.act_function.lower() == 'leaky_relu':
-            if value >= 0:
-                value= value
-            elif value < 0:
-                value= 0.1 * value
-        elif self.act_function.lower() == 'swish':
-            value= value * 1/(1 +np.exp(-value))
-        elif self.act_function.lower() == 'mish':
-            y= np.log(1+np.exp(value))
-            value= value * ((np.exp(2*y)-1) / (np.exp(2*y)+1))
+    def activation_function(self, value, name='unit_step'):
+        if name == 'unit_step':
+            return np.where(value >= 0, 1, 0)
+        elif name == 'sigmoid':
+            return 1 / (1 + np.exp(-value))
+        elif name == 'tanh':
+            return np.tanh(value)
+        elif name == 'relu':
+            return np.maximum(0, value)
         else:
-            print('act_function available: unit_step, linear, sigmoid, tanh /n')
-        return value
-    
-    def learning(self, inputs):
-        """
+            return value
 
-        Parameters
-        ----------
-        inputs : array of input
+    def learning(self, inputs, act_func='unit_step'):
+        summation = np.dot(inputs, self.weight[1:]) + self.weight[0]
+        return self.activation_function(summation, act_func)
 
-        Returns
-        -------
-        a float value
-
-        """
-        summation= np.dot(inputs, self.weight[1:]) + self.weight[0]
-        activation= self.activation_function(value= summation)
-        return activation
-        
-    def training (self, training_inputs, training_labels, name):
-        """
-        
-
-        Parameters
-        ----------
-        training_inputs : np.array
-            set of numpy array from the data
-        training_labels : Int
-            numerical categerocial type
-        name : string
-            activation function type
-
-        Returns
-        error: list
-        TYPE
-            list of error through iteration
-
-        """
-        self.act_function= name
-        self.labels= list(set(training_labels))
-        for  _ in range (self.epochs):
-            err= 0
-            for inputs, label in zip(training_inputs, training_labels):
-                predict= self.learning(inputs)
-                self.weight[0] += self.learning_rate * (label - predict)
-                self.weight[1:] += self.learning_rate * (label - predict) * inputs
-                err += err + abs(label-predict)
-            self.error.append(err)
+    def training(self, X, y, act_func='unit_step'):
+        self.labels = sorted(set(y))
+        for _ in range(self.epochs):
+            err_sum = 0
+            for inputs, label in zip(X, y):
+                prediction = self.learning(inputs, act_func)
+                update = self.learning_rate * (label - prediction)
+                self.weight[1:] += update * inputs
+                self.weight[0] += update
+                err_sum += abs(label - prediction)
+            self.error.append(err_sum)
         return self.error
-    
-    def predict(self, inputs):
-        """
-        
 
-        Parameters
-        ----------
-        inputs : list
-            list of input
+    def predict(self, X, act_func='unit_step'):
+        results = []
+        for x in X:
+            results.append(self.learning(x, act_func))
+        return np.array(results)
 
-        Returns
-        -------
-        int
-            label of input
+# === Example: Test on Linear vs Nonlinear Problem ===
+X_and = np.array([[0,0],[0,1],[1,0],[1,1]])
+y_and = np.array([0,0,0,1])  # linear separable
 
-        """
-        predictions= self.learning(inputs)
-        delta=[]
-        for label in self.labels:
-            delta.append(abs(label-predictions))
-        idx= delta.index(min(delta))
-        return self.labels[idx]
+X_xor = np.array([[0,0],[0,1],[1,0],[1,1]])
+y_xor = np.array([0,1,1,0])  # non-linear
+
+p = Perceptron(no_input=2, epochs=20, learning_rate=0.1)
+
+print("=== AND Problem ===")
+p.training(X_and, y_and)
+print("Predictions:", p.predict(X_and))
+plt.plot(p.error)
+plt.title("Error over epochs (AND)")
+plt.show()
+
+print("\n=== XOR Problem ===")
+p2 = Perceptron(no_input=2, epochs=20, learning_rate=0.1)
+p2.training(X_xor, y_xor)
+print("Predictions:", p2.predict(X_xor))
+plt.plot(p2.error)
+plt.title("Error over epochs (XOR)")
+plt.show()
